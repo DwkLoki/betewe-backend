@@ -2,22 +2,21 @@ module.exports = {
     up: async (queryInterface) => {
       const categories = [
         'Akuntansi',
+        'Filsafat',
         'Ilmu Ekonomi',
         'Manajemen',
         'Teknik Elektro',
         'Teknik Geologi',
         'Ekonomi dan Bisnis',
-        'Filsafat',
         'Hukum',
         'Ilmu Sosial',
         'Aljabar Linier',
-        'Basis Data',
         'Kedokteran dan Ilmu Kesehatan',
         'Psikologi',
         'Kehutanan',
         'Ilmu Pendidikan',
-        'Sastra dan Ilmu Budaya',
-        'Pertanian'
+        'Pertanian',
+        'Sastra dan Ilmu Budaya'
       ].map(name => ({
         name,
         created_at: new Date(),

@@ -31,6 +31,10 @@ module.exports = {
     },
   
     down: async (queryInterface) => {
-      await queryInterface.bulkDelete('questions', null, {});
+      await queryInterface.dropTable('answers');
+      await queryInterface.dropTable('QuestionLikes'); // tambahkan ini
+      await queryInterface.dropTable('questions');
+      await queryInterface.dropTable('categories');
+      await queryInterface.dropTable('users');
     }
 };
