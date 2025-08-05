@@ -1,4 +1,4 @@
-const { Question, User, Category, sequelize } = require('../models');
+const { Question, User, Category, Answer, sequelize } = require('../models');
 
 exports.create = async (req, res) => {
   const t = await sequelize.transaction();
@@ -60,7 +60,12 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
+    const where = {};
+    if (req.query.userId) {
+      where.user_id = req.query.userId;
+    }
     const questions = await Question.findAll({
+      where,
       order: [['created_at', 'DESC']],
       include: [
         {
@@ -76,6 +81,69 @@ exports.getAll = async (req, res) => {
       ]
     });
     res.json(questions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const questions = await Question.findAll({
+      where: { user_id: userId },
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'nama_lengkap', 'jurusan', 'foto_profil']
+        },
+        {
+          model: Category,
+          as: 'categories',
+          attributes: ['id', 'name'],
+          through: { attributes: [] }
+        }
+      ]
+    });
+    res.json(questions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const questionId = req.params.id;
+    const question = await Question.findByPk(questionId, {
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'nama_lengkap', 'jurusan', 'foto_profil']
+        },
+        {
+          model: Category,
+          as: 'categories',
+          attributes: ['id', 'name'],
+          through: { attributes: [] }
+        },
+        {
+          model: Answer,
+          include: [
+            {
+              model: User,
+              attributes: ['id', 'username', 'nama_lengkap', 'jurusan', 'foto_profil']
+            }
+          ],
+          order: [['created_at', 'ASC']]
+        }
+      ]
+    });
+
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    res.json(question);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
