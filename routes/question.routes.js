@@ -11,5 +11,8 @@ router.get('/', questionController.getAll);
 router.get('/user/:userId', questionController.getByUser);
 // Endpoint get detail pertanyaan berdasarkan id
 router.get('/:id', questionController.getById);
+// Endpoint upvote dan downvote pertanyaan
+router.post('/:id/upvote', authenticateToken, questionController.upvote);
+router.post('/:id/downvote', authenticateToken, questionController.downvote);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const { Question, User, Category, Answer, sequelize } = require('../models');
+const { Question, User, Category, Answer, sequelize, QuestionVote } = require('../models');
 
 exports.create = async (req, res) => {
   const t = await sequelize.transaction();
@@ -145,6 +145,80 @@ exports.getById = async (req, res) => {
 
     res.json(question);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Tambah fungsi upvote pertanyaan
+exports.upvote = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const userId = req.userId;
+    const questionId = req.params.id;
+    const question = await Question.findByPk(questionId, { transaction: t });
+    if (!question) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    let vote = await QuestionVote.findOne({ where: { user_id: userId, question_id: questionId }, transaction: t });
+    if (!vote) {
+      // Belum pernah vote, tambahkan upvote
+      await QuestionVote.create({ user_id: userId, question_id: questionId, vote_type: 'up' }, { transaction: t });
+      question.vote += 1;
+      await question.save({ transaction: t });
+      await t.commit();
+      return res.json({ id: question.id, vote: question.vote, message: 'Upvoted' });
+    } else if (vote.vote_type === 'up') {
+      await t.rollback();
+      return res.status(400).json({ error: 'You have already upvoted this question' });
+    } else {
+      // Sudah downvote, ganti ke upvote
+      vote.vote_type = 'up';
+      await vote.save({ transaction: t });
+      question.vote += 2; // dari -1 ke +1
+      await question.save({ transaction: t });
+      await t.commit();
+      return res.json({ id: question.id, vote: question.vote, message: 'Changed vote to upvote' });
+    }
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Tambah fungsi downvote pertanyaan
+exports.downvote = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const userId = req.userId;
+    const questionId = req.params.id;
+    const question = await Question.findByPk(questionId, { transaction: t });
+    if (!question) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    let vote = await QuestionVote.findOne({ where: { user_id: userId, question_id: questionId }, transaction: t });
+    if (!vote) {
+      // Belum pernah vote, tambahkan downvote
+      await QuestionVote.create({ user_id: userId, question_id: questionId, vote_type: 'down' }, { transaction: t });
+      question.vote -= 1;
+      await question.save({ transaction: t });
+      await t.commit();
+      return res.json({ id: question.id, vote: question.vote, message: 'Downvoted' });
+    } else if (vote.vote_type === 'down') {
+      await t.rollback();
+      return res.status(400).json({ error: 'You have already downvoted this question' });
+    } else {
+      // Sudah upvote, ganti ke downvote
+      vote.vote_type = 'down';
+      await vote.save({ transaction: t });
+      question.vote -= 2; // dari +1 ke -1
+      await question.save({ transaction: t });
+      await t.commit();
+      return res.json({ id: question.id, vote: question.vote, message: 'Changed vote to downvote' });
+    }
+  } catch (error) {
+    await t.rollback();
     res.status(500).json({ error: error.message });
   }
 };
