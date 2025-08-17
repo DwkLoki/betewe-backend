@@ -125,10 +125,10 @@ exports.upvote = async (req, res) => {
       await t.rollback();
       return res.status(400).json({ error: 'You have already upvoted this answer' });
     } else {
-      // Sudah downvote, ganti ke upvote
+      // Sudah downvote, ganti ke upvote (hapus downvote lalu tambah upvote = +1 saja)
       vote.vote_type = 'up';
       await vote.save({ transaction: t });
-      answer.vote += 2; // dari -1 ke +1
+      answer.vote += 1; // hanya +1 karena menghapus efek downvote (-1) dan menambah upvote (+1) = net +1
       await answer.save({ transaction: t });
       await t.commit();
       return res.json({ id: answer.id, vote: answer.vote, message: 'Changed vote to upvote' });
@@ -162,14 +162,107 @@ exports.downvote = async (req, res) => {
       await t.rollback();
       return res.status(400).json({ error: 'You have already downvoted this answer' });
     } else {
-      // Sudah upvote, ganti ke downvote
+      // Sudah upvote, ganti ke downvote (hapus upvote lalu tambah downvote = -1 saja)
       vote.vote_type = 'down';
       await vote.save({ transaction: t });
-      answer.vote -= 2; // dari +1 ke -1
+      answer.vote -= 1; // hanya -1 karena menghapus efek upvote (+1) dan menambah downvote (-1) = net -1
       await answer.save({ transaction: t });
       await t.commit();
       return res.json({ id: answer.id, vote: answer.vote, message: 'Changed vote to downvote' });
     }
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Fungsi edit jawaban
+exports.update = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const userId = req.userId;
+    const answerId = req.params.id;
+    const { content } = req.body;
+
+    // Validasi input
+    if (!content) {
+      await t.rollback();
+      return res.status(400).json({ error: 'content is required' });
+    }
+
+    // Cari jawaban
+    const answer = await Answer.findByPk(answerId, { transaction: t });
+
+    if (!answer) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Answer not found' });
+    }
+
+    // Cek apakah user adalah pemilik jawaban
+    if (answer.user_id !== userId) {
+      await t.rollback();
+      return res.status(403).json({ error: 'You can only edit your own answers' });
+    }
+
+    // Update jawaban
+    answer.content = content;
+    await answer.save({ transaction: t });
+
+    await t.commit();
+    res.json({
+      id: answer.id,
+      content: answer.content,
+      vote: answer.vote,
+      updated_at: answer.updated_at
+    });
+
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Fungsi hapus jawaban
+exports.delete = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const userId = req.userId;
+    const answerId = req.params.id;
+
+    // Cari jawaban
+    const answer = await Answer.findByPk(answerId, { transaction: t });
+
+    if (!answer) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Answer not found' });
+    }
+
+    // Cek apakah user adalah pemilik jawaban
+    if (answer.user_id !== userId) {
+      await t.rollback();
+      return res.status(403).json({ error: 'You can only delete your own answers' });
+    }
+
+    // Cek apakah jawaban memiliki upvote > 1
+    if (answer.vote > 1) {
+      await t.rollback();
+      return res.status(400).json({
+        error: 'Cannot delete answer with more than 1 upvote'
+      });
+    }
+
+    // Hapus semua vote terkait jawaban ini
+    await AnswerVote.destroy({
+      where: { answer_id: answerId },
+      transaction: t
+    });
+
+    // Hapus jawaban
+    await answer.destroy({ transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Answer deleted successfully' });
+
   } catch (error) {
     await t.rollback();
     res.status(500).json({ error: error.message });

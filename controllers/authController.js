@@ -195,3 +195,46 @@ exports.updateMe = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Fungsi ubah kata sandi
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { oldPassword, newPassword } = req.body;
+
+    // Validasi input
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: 'oldPassword and newPassword are required' });
+    }
+
+    // Cek panjang password baru
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    // Cari user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verifikasi password lama
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!isOldPasswordValid) {
+      return res.status(400).json({ error: 'Old password is incorrect' });
+    }
+
+    // Hash password baru
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.password_hash = hashedNewPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+
+  } catch (error) {
+    console.error('ERROR CHANGE PASSWORD:', error);
+    res.status(500).json({ error: error.message });
+  }
+};

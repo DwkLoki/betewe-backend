@@ -15,4 +15,7 @@ router.get('/:id', questionController.getById);
 router.post('/:id/upvote', authenticateToken, questionController.upvote);
 router.post('/:id/downvote', authenticateToken, questionController.downvote);
 
+// Endpoint hapus pertanyaan
+router.delete('/:id', authenticateToken, questionController.delete);
+
 module.exports = router;

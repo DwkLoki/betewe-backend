@@ -13,4 +13,8 @@ router.get('/user/:userId', answerController.getByUser);
 router.post('/:id/upvote', authenticateToken, answerController.upvote);
 router.post('/:id/downvote', authenticateToken, answerController.downvote);
 
+// Endpoint edit dan hapus jawaban
+router.put('/:id', authenticateToken, answerController.update);
+router.delete('/:id', authenticateToken, answerController.delete);
+
 module.exports = router;
