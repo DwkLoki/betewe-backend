@@ -238,3 +238,61 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Fungsi upload gambar untuk konten pertanyaan/jawaban
+exports.uploadContentImage = (req, res) => {
+  // Konfigurasi multer untuk upload gambar konten
+  const contentStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadDir = 'uploads/content';
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'content-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+
+  const contentUpload = multer({
+    storage: contentStorage,
+    limits: {
+      fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = /jpeg|jpg|png|gif/;
+      const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = allowedTypes.test(file.mimetype);
+      
+      if (mimetype && extname) {
+        return cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed!'));
+      }
+    }
+  }).single('image');
+
+  contentUpload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    try {
+      // Return URL gambar yang bisa diakses
+      const imageUrl = `/uploads/content/${req.file.filename}`;
+      res.json({
+        url: imageUrl,
+        filename: req.file.filename
+      });
+    } catch (error) {
+      console.error('ERROR UPLOAD CONTENT IMAGE:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+};
