@@ -50,6 +50,8 @@ npx sequelize-cli db:seed:all
 
 ### 5. Jalankan server
 ```bash
+npx nodemon server.js
+# atau
 npm start
 # atau
 node server.js
@@ -365,15 +367,6 @@ GET /api/categories
 
 ## Testing API
 Gunakan Postman/Insomnia untuk mencoba endpoint di `http://localhost:3000/api/`
-
-## Deploy
-Platform yang direkomendasikan:
-- Render.com (gratis dengan PostgreSQL built-in)
-- Railway.app (gratis dengan $5 credit/bulan)
-- Supabase + Vercel untuk kombinasi terbaik
-
-## Lisensi
-MIT
 
 ---
 Jika ada error, pastikan environment dan database sudah benar.
